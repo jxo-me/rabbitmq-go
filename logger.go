@@ -11,10 +11,10 @@ import (
 type Logger interface {
 	Fatalf(context.Context, string, ...interface{})
 	Errorf(context.Context, string, ...interface{})
-	Warnf(context.Context, string, ...interface{})
+	Warningf(context.Context, string, ...interface{})
 	Infof(context.Context, string, ...interface{})
 	Debugf(context.Context, string, ...interface{})
-	Tracef(context.Context, string, ...interface{})
+	Noticef(context.Context, string, ...interface{})
 }
 
 const loggingPrefix = "rabbit"
@@ -30,7 +30,7 @@ func (l stdDebugLogger) Errorf(ctx context.Context, format string, v ...interfac
 	log.Printf(fmt.Sprintf("%s ERROR: %s", loggingPrefix, format), v...)
 }
 
-func (l stdDebugLogger) Warnf(ctx context.Context, format string, v ...interface{}) {
+func (l stdDebugLogger) Warningf(ctx context.Context, format string, v ...interface{}) {
 	log.Printf(fmt.Sprintf("%s WARN: %s", loggingPrefix, format), v...)
 }
 
@@ -42,4 +42,4 @@ func (l stdDebugLogger) Debugf(ctx context.Context, format string, v ...interfac
 	log.Printf(fmt.Sprintf("%s DEBUG: %s", loggingPrefix, format), v...)
 }
 
-func (l stdDebugLogger) Tracef(ctx context.Context, format string, v ...interface{}) {}
+func (l stdDebugLogger) Noticef(ctx context.Context, format string, v ...interface{}) {}

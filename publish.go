@@ -227,7 +227,7 @@ func (publisher *Publisher) startNotifyReturnHandler() {
 func (publisher *Publisher) startNotifyPublishHandler(ctx context.Context) {
 	err := publisher.chManager.channel.Confirm(false)
 	if err != nil {
-		publisher.chManager.logger.Warnf(ctx, "error publisher channel Confirm:%v", err)
+		publisher.chManager.logger.Warningf(ctx, "error publisher channel Confirm:%v", err)
 	}
 	go func() {
 		publishAMQPCh := publisher.chManager.channel.NotifyPublish(make(chan amqp.Confirmation, 1))

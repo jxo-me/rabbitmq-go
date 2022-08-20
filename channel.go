@@ -65,7 +65,7 @@ func (chManager *channelManager) startNotifyCancelOrClosed(ctx context.Context) 
 		if err != nil {
 			chManager.logger.Errorf(ctx, "attempting to reconnect to amqp server after close with error: %v", err)
 			chManager.reconnectLoop(ctx)
-			chManager.logger.Warnf(ctx, "successfully reconnected to amqp server")
+			chManager.logger.Warningf(ctx, "successfully reconnected to amqp server")
 			chManager.notifyCancelOrClose <- err
 		}
 		if err == nil {
@@ -74,7 +74,7 @@ func (chManager *channelManager) startNotifyCancelOrClosed(ctx context.Context) 
 	case err := <-notifyCancelChan:
 		chManager.logger.Errorf(ctx, "attempting to reconnect to amqp server after cancel with error: %s", err)
 		chManager.reconnectLoop(ctx)
-		chManager.logger.Warnf(ctx, "successfully reconnected to amqp server after cancel")
+		chManager.logger.Warningf(ctx, "successfully reconnected to amqp server after cancel")
 		chManager.notifyCancelOrClose <- errors.New(err)
 	}
 }
@@ -106,11 +106,11 @@ func (chManager *channelManager) reconnect(ctx context.Context) error {
 
 	err = chManager.channel.Close()
 	if err != nil {
-		chManager.logger.Warnf(ctx, "error channel Close: %v", err)
+		chManager.logger.Warningf(ctx, "error channel Close: %v", err)
 	}
 	err = chManager.connection.Close()
 	if err != nil {
-		chManager.logger.Warnf(ctx, "error connection Close: %v", err)
+		chManager.logger.Warningf(ctx, "error connection Close: %v", err)
 	}
 
 	chManager.connection = newConn

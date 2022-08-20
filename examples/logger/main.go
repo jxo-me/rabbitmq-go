@@ -19,7 +19,7 @@ func (l errorLogger) Errorf(ctx context.Context, format string, v ...interface{}
 	log.Printf("mylogger: "+format, v...)
 }
 
-func (l errorLogger) Warnf(ctx context.Context, format string, v ...interface{}) {
+func (l errorLogger) Warningf(ctx context.Context, format string, v ...interface{}) {
 }
 
 func (l errorLogger) Infof(ctx context.Context, format string, v ...interface{}) {
@@ -28,7 +28,7 @@ func (l errorLogger) Infof(ctx context.Context, format string, v ...interface{})
 func (l errorLogger) Debugf(ctx context.Context, format string, v ...interface{}) {
 }
 
-func (l errorLogger) Tracef(ctx context.Context, format string, v ...interface{}) {}
+func (l errorLogger) Noticef(ctx context.Context, format string, v ...interface{}) {}
 
 func main() {
 	ctx := context.Background()
