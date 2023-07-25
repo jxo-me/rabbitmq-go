@@ -3,19 +3,13 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"github.com/jxo-me/rabbitmq-go/internal/logger"
 	"log"
 )
 
-// Logger is the interface to send logs to. It can be set using
+// Logger is describes a logging structure. It can be set using
 // WithPublisherOptionsLogger() or WithConsumerOptionsLogger().
-type Logger interface {
-	Fatalf(context.Context, string, ...interface{})
-	Errorf(context.Context, string, ...interface{})
-	Warningf(context.Context, string, ...interface{})
-	Infof(context.Context, string, ...interface{})
-	Debugf(context.Context, string, ...interface{})
-	Noticef(context.Context, string, ...interface{})
-}
+type Logger logger.Logger
 
 const loggingPrefix = "rabbit"
 

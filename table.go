@@ -32,9 +32,9 @@ import amqp "github.com/rabbitmq/amqp091-go"
 type Table map[string]interface{}
 
 func tableToAMQPTable(table Table) amqp.Table {
-	t := amqp.Table{}
+	new := amqp.Table{}
 	for k, v := range table {
-		t[k] = v
+		new[k] = v
 	}
-	return t
+	return new
 }

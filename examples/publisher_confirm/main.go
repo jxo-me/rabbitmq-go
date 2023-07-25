@@ -30,6 +30,7 @@ func main() {
 		rabbitmq.WithPublisherOptionsLogging,
 		rabbitmq.WithPublisherOptionsExchangeName("events"),
 		rabbitmq.WithPublisherOptionsExchangeDeclare,
+		rabbitmq.WithPublisherOptionsConfirm,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -38,10 +39,6 @@ func main() {
 
 	publisher.NotifyReturn(func(r rabbitmq.Return) {
 		log.Printf("message returned from server: %s", string(r.Body))
-	})
-
-	publisher.NotifyPublish(func(c rabbitmq.Confirmation) {
-		log.Printf("message confirmed from server. tag: %v, ack: %v", c.DeliveryTag, c.Ack)
 	})
 
 	// block main thread - wait for shutdown signal
@@ -63,7 +60,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			err = publisher.PublishWithContext(
+			confirms, err := publisher.PublishWithDeferredConfirmWithContext(
 				context.Background(),
 				[]byte("hello, world"),
 				[]string{"my_routing_key"},
@@ -74,6 +71,20 @@ func main() {
 			)
 			if err != nil {
 				log.Println(err)
+				continue
+			} else if len(confirms) == 0 || confirms[0] == nil {
+				fmt.Println("message publishing not confirmed")
+				continue
+			}
+			fmt.Println("message published")
+			ok, err := confirms[0].WaitContext(context.Background())
+			if err != nil {
+				log.Println(err)
+			}
+			if ok {
+				fmt.Println("message publishing confirmed")
+			} else {
+				fmt.Println("message publishing not confirmed")
 			}
 		case <-done:
 			fmt.Println("stopping publisher")

@@ -6,7 +6,7 @@ import (
 )
 
 func (publisher *Publisher) startNotifyFlowHandler(ctx context.Context) {
-	notifyFlowChan := publisher.chManager.channel.NotifyFlow(make(chan bool))
+	notifyFlowChan := publisher.chanManager.NotifyFlowSafe(make(chan bool))
 	publisher.disablePublishDueToFlowMux.Lock()
 	publisher.disablePublishDueToFlow = false
 	publisher.disablePublishDueToFlowMux.Unlock()
@@ -25,7 +25,7 @@ func (publisher *Publisher) startNotifyFlowHandler(ctx context.Context) {
 }
 
 func (publisher *Publisher) startNotifyBlockedHandler(ctx context.Context) {
-	blockings := publisher.chManager.connection.NotifyBlocked(make(chan amqp.Blocking))
+	blockings := publisher.connManager.NotifyBlockedSafe(make(chan amqp.Blocking))
 	publisher.disablePublishDueToBlockedMux.Lock()
 	publisher.disablePublishDueToBlocked = false
 	publisher.disablePublishDueToBlockedMux.Unlock()

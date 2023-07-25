@@ -34,18 +34,28 @@ func main() {
 	ctx := context.Background()
 	mylogger := &errorLogger{}
 
+	conn, err := rabbitmq.NewConn(
+		ctx,
+		"amqp://guest:guest@localhost",
+		rabbitmq.WithConnectionOptionsLogging,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close(ctx)
+
 	publisher, err := rabbitmq.NewPublisher(
 		ctx,
-		"amqp://guest:guest@localhost", rabbitmq.Config{},
+		conn,
 		rabbitmq.WithPublisherOptionsLogger(mylogger),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = publisher.Publish(
-		ctx,
+	err = publisher.PublishWithContext(
+		context.Background(),
 		[]byte("hello, world"),
-		[]string{"routing_key"},
+		[]string{"my_routing_key"},
 		rabbitmq.WithPublishOptionsContentType("application/json"),
 		rabbitmq.WithPublishOptionsMandatory,
 		rabbitmq.WithPublishOptionsPersistentDelivery,
@@ -55,10 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	returns := publisher.NotifyReturn()
-	go func() {
-		for r := range returns {
-			log.Printf("message returned from server: %s", string(r.Body))
-		}
-	}()
+	publisher.NotifyReturn(func(r rabbitmq.Return) {
+		log.Printf("message returned from server: %s", string(r.Body))
+	})
 }
