@@ -125,14 +125,23 @@ func (rpc *RpcClient) RequestWithContext(
 	if options.DeliveryMode == 0 {
 		options.DeliveryMode = Transient
 	}
+
+	q, err := rpc.chanManager.QueueDeclareSafe(
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
 	msgs, err := rpc.chanManager.ConsumeSafe(
-		routingKey,        // queue
-		options.MessageID, // consumer
-		true,              // auto-ack
-		false,             // exclusive
-		false,             // no-local
-		false,             // no-wait
-		nil,               // args
+		q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
 	)
 	message := amqp.Publishing{}
 	message.ContentType = options.ContentType
@@ -143,7 +152,7 @@ func (rpc *RpcClient) RequestWithContext(
 	message.ContentEncoding = options.ContentEncoding
 	message.Priority = options.Priority
 	message.CorrelationId = options.CorrelationID
-	message.ReplyTo = options.ReplyTo
+	message.ReplyTo = q.Name
 	message.MessageId = options.MessageID
 	message.Timestamp = options.Timestamp
 	message.Type = options.Type
