@@ -49,6 +49,7 @@ func main() {
 	if err != nil {
 		return
 	}
+	defer ch.Close()
 	consumer, err := rabbitmq.NewConsumer(
 		ctx,
 		conn,
