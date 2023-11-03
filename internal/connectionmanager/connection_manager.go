@@ -138,12 +138,3 @@ func (connManager *ConnectionManager) reconnect(ctx context.Context) error {
 	connManager.connection = newConn
 	return nil
 }
-
-func (connManager *ConnectionManager) NewConnect(ctx context.Context) (*amqp.Connection, error) {
-	newConn, err := amqp.DialConfig(connManager.url, amqp.Config(connManager.amqpConfig))
-	if err != nil {
-		return nil, err
-	}
-
-	return newConn, nil
-}

@@ -60,14 +60,3 @@ func (conn *Conn) Close(ctx context.Context) error {
 	conn.closeConnectionToManagerCh <- struct{}{}
 	return conn.connectionManager.Close(ctx)
 }
-
-func (conn *Conn) GetNewChannel() (*amqp.Channel, error) {
-	con := conn.connectionManager.CheckoutConnection()
-	defer conn.connectionManager.CheckinConnection()
-
-	ch, err := con.Channel()
-	if err != nil {
-		return nil, err
-	}
-	return ch, nil
-}
