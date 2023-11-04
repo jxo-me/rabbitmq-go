@@ -138,3 +138,14 @@ func (connManager *ConnectionManager) reconnect(ctx context.Context) error {
 	connManager.connection = newConn
 	return nil
 }
+
+// NewConnect safely closes the current channel and obtains a new one
+func (connManager *ConnectionManager) NewConnect(ctx context.Context) (*amqp.Connection, error) {
+	newConn, err := amqp.DialConfig(connManager.url, connManager.amqpConfig)
+	if err != nil {
+		connManager.logger.Warningf(ctx, "error new connection : %v", err)
+		return nil, err
+	}
+
+	return newConn, nil
+}

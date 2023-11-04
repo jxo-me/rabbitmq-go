@@ -5,40 +5,40 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func (rpc *RpcClient) startNotifyFlowHandler(ctx context.Context) {
-	notifyFlowChan := rpc.chanManager.NotifyFlowSafe(make(chan bool))
-	rpc.disablePublishDueToFlowMux.Lock()
-	rpc.disablePublishDueToFlow = false
-	rpc.disablePublishDueToFlowMux.Unlock()
+func (c *RpcClient) startNotifyFlowHandler(ctx context.Context) {
+	notifyFlowChan := c.chanManager.NotifyFlowSafe(make(chan bool))
+	c.disablePublishDueToFlowMux.Lock()
+	c.disablePublishDueToFlow = false
+	c.disablePublishDueToFlowMux.Unlock()
 
 	for ok := range notifyFlowChan {
-		rpc.disablePublishDueToFlowMux.Lock()
+		c.disablePublishDueToFlowMux.Lock()
 		if ok {
-			rpc.options.Logger.Warningf(ctx, "pausing publishing due to flow request from server")
-			rpc.disablePublishDueToFlow = true
+			c.options.Logger.Warningf(ctx, "pausing publishing due to flow request from server")
+			c.disablePublishDueToFlow = true
 		} else {
-			rpc.disablePublishDueToFlow = false
-			rpc.options.Logger.Warningf(ctx, "resuming publishing due to flow request from server")
+			c.disablePublishDueToFlow = false
+			c.options.Logger.Warningf(ctx, "resuming publishing due to flow request from server")
 		}
-		rpc.disablePublishDueToFlowMux.Unlock()
+		c.disablePublishDueToFlowMux.Unlock()
 	}
 }
 
-func (rpc *RpcClient) startNotifyBlockedHandler(ctx context.Context) {
-	blockings := rpc.connManager.NotifyBlockedSafe(make(chan amqp.Blocking))
-	rpc.disablePublishDueToBlockedMux.Lock()
-	rpc.disablePublishDueToBlocked = false
-	rpc.disablePublishDueToBlockedMux.Unlock()
+func (c *RpcClient) startNotifyBlockedHandler(ctx context.Context) {
+	blockings := c.connManager.NotifyBlockedSafe(make(chan amqp.Blocking))
+	c.disablePublishDueToBlockedMux.Lock()
+	c.disablePublishDueToBlocked = false
+	c.disablePublishDueToBlockedMux.Unlock()
 
 	for b := range blockings {
-		rpc.disablePublishDueToBlockedMux.Lock()
+		c.disablePublishDueToBlockedMux.Lock()
 		if b.Active {
-			rpc.options.Logger.Warningf(ctx, "pausing publishing due to TCP blocking from server")
-			rpc.disablePublishDueToBlocked = true
+			c.options.Logger.Warningf(ctx, "pausing publishing due to TCP blocking from server")
+			c.disablePublishDueToBlocked = true
 		} else {
-			rpc.disablePublishDueToBlocked = false
-			rpc.options.Logger.Warningf(ctx, "resuming publishing due to TCP blocking from server")
+			c.disablePublishDueToBlocked = false
+			c.options.Logger.Warningf(ctx, "resuming publishing due to TCP blocking from server")
 		}
-		rpc.disablePublishDueToBlockedMux.Unlock()
+		c.disablePublishDueToBlockedMux.Unlock()
 	}
 }

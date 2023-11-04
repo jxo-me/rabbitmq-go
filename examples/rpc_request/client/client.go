@@ -71,20 +71,11 @@ func main() {
 	}
 	defer client.Close(ctx)
 
-	client.NotifyReturn(func(r rabbitmq.Return) {
-		log.Printf("message returned from server: %s", string(r.Body))
-	})
-
-	client.NotifyPublish(func(c rabbitmq.Confirmation) {
-		log.Printf("message confirmed from server. tag: %v, ack: %v", c.DeliveryTag, c.Ack)
-	})
-	corrId := randomString(32)
-	data, err := client.RequestWithContext(
+	//corrId := randomString(32)
+	data, err := client.PublishWithContext(
 		ctx,
 		[]byte(strconv.Itoa(n)),
 		"rpc_queue",
-		rabbitmq.WithPublishOptionsContentType("application/json"),
-		rabbitmq.WithPublishOptionsCorrelationID(corrId),
 	)
 	if err != nil {
 		log.Println(err)
