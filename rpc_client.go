@@ -11,6 +11,7 @@ import (
 )
 
 type RpcClient struct {
+	conn                       *Conn
 	chanManager                *channelmanager.ChannelManager
 	connManager                *connectionmanager.ConnectionManager
 	reconnectErrCh             <-chan error
@@ -57,6 +58,7 @@ func NewRpcClient(ctx context.Context, conn *Conn, optionFuncs ...func(*Publishe
 
 	reconnectErrCh, closeCh := chanManager.NotifyReconnect()
 	rpcClient := &RpcClient{
+		conn:                          conn,
 		chanManager:                   chanManager,
 		connManager:                   conn.connectionManager,
 		reconnectErrCh:                reconnectErrCh,
@@ -125,8 +127,16 @@ func (rpc *RpcClient) RequestWithContext(
 	if options.DeliveryMode == 0 {
 		options.DeliveryMode = Transient
 	}
+	ch, err := rpc.conn.GetNewChannel()
+	if err != nil {
+		return nil, err
+	}
+	defer func(ch *amqp.Channel) {
+		_ = ch.Close()
+		fmt.Println("ch close...")
+	}(ch)
 
-	q, err := rpc.chanManager.QueueDeclareSafe(
+	q, err := ch.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when unused
@@ -134,7 +144,8 @@ func (rpc *RpcClient) RequestWithContext(
 		false, // noWait
 		nil,   // arguments
 	)
-	msgs, err := rpc.chanManager.ConsumeSafe(
+
+	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -160,7 +171,7 @@ func (rpc *RpcClient) RequestWithContext(
 	message.AppId = options.AppID
 
 	// Actual publish.
-	err = rpc.chanManager.PublishWithContextSafe(
+	err = ch.PublishWithContext(
 		ctx,
 		options.Exchange,
 		routingKey,
