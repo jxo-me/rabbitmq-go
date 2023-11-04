@@ -211,7 +211,7 @@ func (m *RequestMap) GetByDeliveryTag(key uint64) (*Request, bool) {
 	return r, ok
 }
 
-// Set will add r to m so it can be fetched later using it's correlation id or
+// Set will add r to m, so it can be fetched later using its correlation id or
 // delivery tag.
 func (m *RequestMap) Set(r *Request) {
 	m.mu.Lock()

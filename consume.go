@@ -160,12 +160,12 @@ func (consumer *Consumer) startGoroutines(
 
 	msgs, err := consumer.chanManager.ConsumeSafe(
 		options.QueueOptions.Name,
-		options.RabbitConsumerOptions.Name,
-		options.RabbitConsumerOptions.AutoAck,
-		options.RabbitConsumerOptions.Exclusive,
+		options.ConsumerOptions.Name,
+		options.ConsumerOptions.AutoAck,
+		options.ConsumerOptions.Exclusive,
 		false, // no-local is not supported by RabbitMQ
-		options.RabbitConsumerOptions.NoWait,
-		tableToAMQPTable(options.RabbitConsumerOptions.Args),
+		options.ConsumerOptions.NoWait,
+		tableToAMQPTable(options.ConsumerOptions.Args),
 	)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func handlerGoroutine(ctx context.Context, consumer *Consumer, msgs <-chan amqp.
 			break
 		}
 
-		if consumeOptions.RabbitConsumerOptions.AutoAck {
+		if consumeOptions.ConsumerOptions.AutoAck {
 			handler(Delivery{msg})
 			continue
 		}

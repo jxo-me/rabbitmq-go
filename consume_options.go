@@ -8,7 +8,7 @@ import (
 // getDefaultConsumerOptions describes the options that will be used when a value isn't provided
 func getDefaultConsumerOptions(queueName string) ConsumerOptions {
 	return ConsumerOptions{
-		RabbitConsumerOptions: RabbitConsumerOptions{
+		ConsumerOptions: ConsumeOptions{
 			Name:      "",
 			AutoAck:   false,
 			Exclusive: false,
@@ -58,52 +58,14 @@ func getDefaultBindingOptions() BindingOptions {
 // If ExchangeOptions is not nil, it will be used to declare an exchange
 // If there are Bindings, the queue will be bound to them
 type ConsumerOptions struct {
-	RabbitConsumerOptions RabbitConsumerOptions
-	QueueOptions          QueueOptions
-	ExchangeOptions       ExchangeOptions
-	Bindings              []Binding
-	Concurrency           int
-	Logger                logger.Logger
-	QOSPrefetch           int
-	QOSGlobal             bool
-}
-
-// RabbitConsumerOptions are used to configure the consumer
-// on the rabbit server
-type RabbitConsumerOptions struct {
-	Name      string
-	AutoAck   bool
-	Exclusive bool
-	NoWait    bool
-	NoLocal   bool
-	Args      Table
-}
-
-// QueueOptions are used to configure a queue.
-// A passive queue is assumed by RabbitMQ to already exist, and attempting to connect
-// to a non-existent queue will cause RabbitMQ to throw an exception.
-type QueueOptions struct {
-	Name       string
-	Durable    bool
-	AutoDelete bool
-	Exclusive  bool
-	NoWait     bool
-	Passive    bool // if false, a missing queue will be created on the server
-	Args       Table
-	Declare    bool
-}
-
-// Binding describes the bhinding of a queue to a routing key on an exchange
-type Binding struct {
-	RoutingKey string
-	BindingOptions
-}
-
-// BindingOptions describes the options a binding can have
-type BindingOptions struct {
-	NoWait  bool
-	Args    Table
-	Declare bool
+	ConsumerOptions ConsumeOptions
+	QueueOptions    QueueOptions
+	ExchangeOptions ExchangeOptions
+	Bindings        []Binding
+	Concurrency     int
+	Logger          logger.Logger
+	QOSPrefetch     int
+	QOSGlobal       bool
 }
 
 // WithConsumerOptionsQueueDurable ensures the queue is a durable queue
@@ -238,7 +200,7 @@ func WithConsumerOptionsConcurrency(concurrency int) func(*ConsumerOptions) {
 // if unset a random name will be given
 func WithConsumerOptionsConsumerName(consumerName string) func(*ConsumerOptions) {
 	return func(options *ConsumerOptions) {
-		options.RabbitConsumerOptions.Name = consumerName
+		options.ConsumerOptions.Name = consumerName
 	}
 }
 
@@ -246,7 +208,7 @@ func WithConsumerOptionsConsumerName(consumerName string) func(*ConsumerOptions)
 // if unset the default will be used (false)
 func WithConsumerOptionsConsumerAutoAck(autoAck bool) func(*ConsumerOptions) {
 	return func(options *ConsumerOptions) {
-		options.RabbitConsumerOptions.AutoAck = autoAck
+		options.ConsumerOptions.AutoAck = autoAck
 	}
 }
 
@@ -255,7 +217,7 @@ func WithConsumerOptionsConsumerAutoAck(autoAck bool) func(*ConsumerOptions) {
 // from this queue. When exclusive is false, the server will fairly distribute
 // deliveries across multiple consumers.
 func WithConsumerOptionsConsumerExclusive(options *ConsumerOptions) {
-	options.RabbitConsumerOptions.Exclusive = true
+	options.ConsumerOptions.Exclusive = true
 }
 
 // WithConsumerOptionsConsumerNoWait sets the consumer to nowait, which means
@@ -263,7 +225,7 @@ func WithConsumerOptionsConsumerExclusive(options *ConsumerOptions) {
 // immediately begin deliveries. If it is not possible to consume, a channel
 // exception will be raised and the channel will be closed.
 func WithConsumerOptionsConsumerNoWait(options *ConsumerOptions) {
-	options.RabbitConsumerOptions.NoWait = true
+	options.ConsumerOptions.NoWait = true
 }
 
 // WithConsumerOptionsLogging uses a default logger that writes to std out

@@ -38,7 +38,7 @@ func main() {
 	ctx := context.Background()
 	conn, err = rabbitmq.NewConn(
 		ctx,
-		"amqp://guest:guest@localhost",
+		"amqp://root:123456@192.168.1.10:5672/",
 		rabbitmq.WithConnectionOptionsLogging,
 	)
 	if err != nil {

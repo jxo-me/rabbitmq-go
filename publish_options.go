@@ -4,45 +4,6 @@ import (
 	"time"
 )
 
-// PublishOptions are used to control how data is published
-type PublishOptions struct {
-	Exchange string
-	// Mandatory fails to publish if there are no queues
-	// bound to the routing key
-	Mandatory bool
-	// Immediate fails to publish if there are no consumers
-	// that can ack bound to the queue on the routing key
-	Immediate bool
-	// MIME content type
-	ContentType string
-	// Transient (0 or 1) or Persistent (2)
-	DeliveryMode uint8
-	// Expiration time in ms that a message will expire from a queue.
-	// See https://www.rabbitmq.com/ttl.html#per-message-ttl-in-publishers
-	Expiration string
-	// MIME content encoding
-	ContentEncoding string
-	// 0 to 9
-	Priority uint8
-	// correlation identifier
-	CorrelationID string
-	// address to to reply to (ex: RPC)
-	ReplyTo string
-	// message identifier
-	MessageID string
-	// message timestamp
-	Timestamp time.Time
-	// message type name
-	Type string
-	// creating user id - ex: "guest"
-	UserID string
-	// creating application id
-	AppID string
-	// Application or exchange specific fields,
-	// the headers exchange will inspect this field.
-	Headers Table
-}
-
 // WithPublishOptionsExchange returns a function that sets the exchange to publish to
 func WithPublishOptionsExchange(exchange string) func(*PublishOptions) {
 	return func(options *PublishOptions) {
@@ -51,13 +12,13 @@ func WithPublishOptionsExchange(exchange string) func(*PublishOptions) {
 }
 
 // WithPublishOptionsMandatory makes the publishing mandatory, which means when a queue is not
-// bound to the routing key a message will be sent back on the returns channel for you to handle
+// bound to the routing key, a message will be sent back on the return channel for you to handle
 func WithPublishOptionsMandatory(options *PublishOptions) {
 	options.Mandatory = true
 }
 
 // WithPublishOptionsImmediate makes the publishing immediate, which means when a consumer is not available
-// to immediately handle the new message, a message will be sent back on the returns channel for you to handle
+// to immediately handle the new message, a message will be sent back on the return channel for you to handle
 func WithPublishOptionsImmediate(options *PublishOptions) {
 	options.Immediate = true
 }

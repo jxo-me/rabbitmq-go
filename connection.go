@@ -71,3 +71,53 @@ func (conn *Conn) GetNewChannel() (*amqp.Channel, error) {
 	}
 	return ch, nil
 }
+
+func monitorAndWait(stopChan chan struct{}, amqpErrs ...chan *amqp.Error) error {
+	result := make(chan error, len(amqpErrs))
+
+	// Setup monitoring for connections and channels can be several connections and several channels.
+	// The first one closed will yield the error.
+	for _, errCh := range amqpErrs {
+		go func(c chan *amqp.Error) {
+			err, ok := <-c
+			if !ok {
+				result <- ErrUnexpectedConnClosed
+				return
+			}
+			result <- err
+		}(errCh)
+	}
+
+	select {
+	case err := <-result:
+		return err
+	case <-stopChan:
+		return nil
+	}
+}
+
+func createConnections(ctx context.Context, conn *connectionmanager.ConnectionManager) (conn1, conn2 *amqp.Connection, err error) {
+	conn1, err = conn.NewConnect(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	conn2, err = conn.NewConnect(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return conn1, conn2, nil
+}
+
+func createChannels(inputConn, outputConn *amqp.Connection) (inputCh, outputCh *amqp.Channel, err error) {
+	inputCh, err = inputConn.Channel()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	outputCh, err = outputConn.Channel()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return inputCh, outputCh, nil
+}

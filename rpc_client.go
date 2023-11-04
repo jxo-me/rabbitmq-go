@@ -20,29 +20,6 @@ const (
 	chanSendWaitTime = 10 * time.Second
 )
 
-var (
-	// ErrRequestReturned can be returned by Client#Send() when the server
-	// returns the message. For example when mandatory is set but the message
-	// can not be routed.
-	ErrRequestReturned = errors.New("publishing returned")
-
-	// ErrRequestRejected can be returned by Client#Send() when the server Nacks
-	// the message. This can happen if there is some problem inside the amqp
-	// server. To check if the error returned is a ErrRequestReturned error, use
-	// errors.Is(err, ErrRequestRejected).
-	ErrRequestRejected = errors.New("publishing Backed")
-
-	// ErrRequestTimeout is an error returned when a client request does not
-	// receive a response within the client timeout duration. To check if the
-	// error returned is an ErrRequestTimeout error, use errors.Is(err,
-	// ErrRequestTimeout).
-	ErrRequestTimeout = errors.New("request timed out")
-	// ErrUnexpectedConnClosed is returned by ListenAndServe() if the server
-	// shuts down without calling Stop() and if AMQP does not give an error
-	// when said shutdown happens.
-	ErrUnexpectedConnClosed = errors.New("unexpected connection close without specific error")
-)
-
 type OnStartedFunc func(inputConn, outputConn *amqp.Connection, inputChannel, outputChannel *amqp.Channel)
 
 type RpcClient struct {
@@ -55,7 +32,7 @@ type RpcClient struct {
 	disablePublishDueToBlocked    bool
 	disablePublishDueToBlockedMux *sync.RWMutex
 
-	options PublisherOptions
+	options ClientOptions
 	log     Logger
 
 	// timeout is the time we should wait after a request is published before
@@ -103,56 +80,6 @@ type RpcClient struct {
 	Sender SendFunc
 	// onStarted will all be executed after the client has connected.
 	onStarted []OnStartedFunc
-}
-
-func monitorAndWait(stopChan chan struct{}, amqpErrs ...chan *amqp.Error) error {
-	result := make(chan error, len(amqpErrs))
-
-	// Setup monitoring for connections and channels can be several connections and several channels.
-	// The first one closed will yield the error.
-	for _, errCh := range amqpErrs {
-		go func(c chan *amqp.Error) {
-			err, ok := <-c
-			if !ok {
-				result <- ErrUnexpectedConnClosed
-				return
-			}
-			result <- err
-		}(errCh)
-	}
-
-	select {
-	case err := <-result:
-		return err
-	case <-stopChan:
-		return nil
-	}
-}
-
-func createConnections(ctx context.Context, conn *connectionmanager.ConnectionManager) (conn1, conn2 *amqp.Connection, err error) {
-	conn1, err = conn.NewConnect(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	conn2, err = conn.NewConnect(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	return conn1, conn2, nil
-}
-
-func createChannels(inputConn, outputConn *amqp.Connection) (inputCh, outputCh *amqp.Channel, err error) {
-	inputCh, err = inputConn.Channel()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	outputCh, err = outputConn.Channel()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return inputCh, outputCh, nil
 }
 
 /*
@@ -322,7 +249,7 @@ func (c *RpcClient) runPublisher(ctx context.Context, ouputChan *amqp.Channel) {
 				return
 			}
 
-			if !c.options.ConfirmMode {
+			if !c.options.PublishOptions.ConfirmMode {
 				// We're not in confirm mode, so we confirm that we have sent
 				// the request here.
 				c.confirmRequest(ctx, request)
@@ -509,16 +436,16 @@ func (c *RpcClient) runOnce(ctx context.Context) error {
 		return err
 	}
 
-	defer inputConn.Close()
-	defer outputConn.Close()
+	defer func() { _ = inputConn.Close() }()
+	defer func() { _ = outputConn.Close() }()
 
 	inputCh, outputCh, err := createChannels(inputConn, outputConn)
 	if err != nil {
 		return err
 	}
 
-	defer inputCh.Close()
-	defer outputCh.Close()
+	defer func() { _ = inputCh.Close() }()
+	defer func() { _ = outputCh.Close() }()
 
 	// Notify everyone that the client has started.
 	// Runs sequentially, so there
@@ -532,7 +459,7 @@ func (c *RpcClient) runOnce(ctx context.Context) error {
 		return err
 	}
 
-	if c.options.ConfirmMode {
+	if c.options.PublishOptions.ConfirmMode {
 		// ConfirmMode is wanted, tell the amqp-server that we want to enable
 		// confirm-mode on this channel and start the confirmation consumer.
 		err = outputCh.Confirm(
@@ -696,8 +623,9 @@ func (c *RpcClient) Stop() {
 	<-c.didStopChan
 }
 
-func NewRpcClient(ctx context.Context, conn *Conn, optionFuncs ...func(*PublisherOptions)) (*RpcClient, error) {
-	defaultOptions := getDefaultPublisherOptions()
+func NewRpcClient(ctx context.Context, conn *Conn, optionFuncs ...func(*ClientOptions)) (*RpcClient, error) {
+	replyQueueName := "rpc-reply-to-" + uuid.New().String()
+	defaultOptions := getDefaultClientOptions(replyQueueName)
 	options := &defaultOptions
 	for _, optionFunc := range optionFuncs {
 		optionFunc(options)
@@ -730,7 +658,7 @@ func NewRpcClient(ctx context.Context, conn *Conn, optionFuncs ...func(*Publishe
 		},
 		middlewares:      []ClientMiddlewareFunc{},
 		timeout:          time.Second * 10,
-		replyToQueueName: "rpc-reply-to-" + uuid.New().String(),
+		replyToQueueName: replyQueueName,
 	}
 
 	rpcClient.Sender = rpcClient.send
