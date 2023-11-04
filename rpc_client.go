@@ -249,7 +249,7 @@ func (c *RpcClient) runPublisher(ctx context.Context, ouputChan *amqp.Channel) {
 				return
 			}
 
-			if !c.options.PublishOptions.ConfirmMode {
+			if !c.options.ConfirmMode {
 				// We're not in confirm mode, so we confirm that we have sent
 				// the request here.
 				c.confirmRequest(ctx, request)
@@ -355,18 +355,11 @@ func (c *RpcClient) runConfirmsConsumer(ctx context.Context, confirms chan amqp.
 func (c *RpcClient) runRepliesConsumer(ctx context.Context, inChan *amqp.Channel) error {
 	queue, err := inChan.QueueDeclare(
 		c.replyToQueueName,
-		false,
-		false,
-		false,
-		false, // no-wait.
-		map[string]interface{}{
-			// Ensure the queue is deleted automatically when it's unused for
-			// more than the set time.
-			// This is to ensure that messages that
-			// are in flight during a reconnecting don't get lost (which might
-			// happen when using `DeleteWhenUnused`).
-			"x-expires": 1 * 60 * 1000, // 1 minute.
-		},
+		c.options.QueueOptions.Durable,
+		c.options.QueueOptions.AutoDelete,
+		c.options.QueueOptions.Exclusive,
+		c.options.QueueOptions.NoWait, // no-wait.
+		tableToAMQPTable(c.options.QueueOptions.Args),
 	)
 	if err != nil {
 		return err
@@ -374,12 +367,12 @@ func (c *RpcClient) runRepliesConsumer(ctx context.Context, inChan *amqp.Channel
 
 	messages, err := inChan.Consume(
 		queue.Name,
-		"",
-		true,
-		true,
-		false, // no-local.
-		false, // no-wait.
-		nil,
+		c.options.ConsumeOptions.Name,
+		c.options.ConsumeOptions.AutoAck,
+		c.options.ConsumeOptions.Exclusive,
+		c.options.ConsumeOptions.NoLocal, // no-local.
+		c.options.ConsumeOptions.NoWait,  // no-wait.
+		tableToAMQPTable(c.options.ConsumeOptions.Args),
 	)
 	if err != nil {
 		return err
@@ -459,7 +452,7 @@ func (c *RpcClient) runOnce(ctx context.Context) error {
 		return err
 	}
 
-	if c.options.PublishOptions.ConfirmMode {
+	if c.options.ConfirmMode {
 		// ConfirmMode is wanted, tell the amqp-server that we want to enable
 		// confirm-mode on this channel and start the confirmation consumer.
 		err = outputCh.Confirm(

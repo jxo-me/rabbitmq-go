@@ -62,9 +62,7 @@ func main() {
 	client, err := rabbitmq.NewRpcClient(
 		ctx,
 		conn,
-		rabbitmq.WithPublisherOptionsLogging,
-		//rabbitmq.WithPublisherOptionsExchangeName("events"),
-		//rabbitmq.WithPublisherOptionsExchangeDeclare,
+		rabbitmq.WithClientOptionsLogging,
 	)
 	if err != nil {
 		log.Fatal(err)

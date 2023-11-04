@@ -92,11 +92,4 @@ type PublishOptions struct {
 	// Application or exchange specific fields,
 	// the headers exchange will inspect this field.
 	Headers Table
-	// ConfirmMode puts the channel that messages are published over in
-	// confirmation mode.
-	// This makes sending requests more reliable at the cost
-	// of some performance.
-	// The server must confirm each publishing.
-	// See https://www.rabbitmq.com/confirms.html#publisher-confirms
-	ConfirmMode bool
 }
