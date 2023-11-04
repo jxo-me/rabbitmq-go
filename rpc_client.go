@@ -10,6 +10,44 @@ import (
 	"sync"
 )
 
+type Requests struct {
+	mu   *sync.RWMutex
+	data map[string]*amqp.Queue
+}
+
+func (r *Requests) Search(key string) (value *amqp.Queue, found bool) {
+	r.mu.RLock()
+	if r.data != nil {
+		value, found = r.data[key]
+	}
+	r.mu.RUnlock()
+	return
+}
+
+func (r *Requests) doSetWithLockCheck(key string, f func() *amqp.Queue) *amqp.Queue {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.data == nil {
+		r.data = make(map[string]*amqp.Queue)
+	}
+	if v, ok := r.data[key]; ok {
+		return v
+	}
+	value := f()
+	if value != nil {
+		r.data[key] = value
+	}
+	return value
+}
+
+func (r *Requests) GetOrSetFuncLock(key string, f func() *amqp.Queue) *amqp.Queue {
+	if v, ok := r.Search(key); !ok {
+		return r.doSetWithLockCheck(key, f)
+	} else {
+		return v
+	}
+}
+
 type RpcClient struct {
 	conn                       *Conn
 	chanManager                *channelmanager.ChannelManager
@@ -26,8 +64,8 @@ type RpcClient struct {
 	handlerMux           *sync.Mutex
 	notifyReturnHandler  func(r Return)
 	notifyPublishHandler func(p Confirmation)
-
-	options PublisherOptions
+	requests             Requests
+	options              PublisherOptions
 }
 
 func (rpc *RpcClient) startup(ctx context.Context) error {
@@ -70,7 +108,11 @@ func NewRpcClient(ctx context.Context, conn *Conn, optionFuncs ...func(*Publishe
 		handlerMux:                    &sync.Mutex{},
 		notifyReturnHandler:           nil,
 		notifyPublishHandler:          nil,
-		options:                       *options,
+		requests: Requests{
+			mu:   new(sync.RWMutex),
+			data: make(map[string]*amqp.Queue),
+		},
+		options: *options,
 	}
 
 	err = rpcClient.startup(ctx)
@@ -127,25 +169,22 @@ func (rpc *RpcClient) RequestWithContext(
 	if options.DeliveryMode == 0 {
 		options.DeliveryMode = Transient
 	}
-	ch, err := rpc.conn.GetNewChannel()
-	if err != nil {
-		return nil, err
-	}
-	defer func(ch *amqp.Channel) {
-		_ = ch.Close()
-		fmt.Println("ch close...")
-	}(ch)
+	q := rpc.requests.GetOrSetFuncLock(routingKey, func() *amqp.Queue {
+		queue, err := rpc.chanManager.QueueDeclareSafe(
+			"",    // name
+			false, // durable
+			false, // delete when unused
+			true,  // exclusive
+			false, // noWait
+			nil,   // arguments
+		)
+		if err != nil {
+			panic(fmt.Sprintf("rpc.chanManager.QueueDeclareSafe error: %s", err.Error()))
+		}
+		return &queue
+	})
 
-	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-
-	msgs, err := ch.Consume(
+	msgs, err := rpc.chanManager.ConsumeSafe(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -171,7 +210,7 @@ func (rpc *RpcClient) RequestWithContext(
 	message.AppId = options.AppID
 
 	// Actual publish.
-	err = ch.PublishWithContext(
+	err = rpc.chanManager.PublishWithContextSafe(
 		ctx,
 		options.Exchange,
 		routingKey,
@@ -185,6 +224,8 @@ func (rpc *RpcClient) RequestWithContext(
 	for d := range msgs {
 		if message.CorrelationId == d.CorrelationId {
 			return d.Body, nil
+		} else {
+			fmt.Println("Unknown request reply message", string(d.Body))
 		}
 	}
 	return nil, err
