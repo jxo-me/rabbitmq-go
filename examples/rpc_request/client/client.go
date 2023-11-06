@@ -79,5 +79,4 @@ func main() {
 		log.Println(err)
 	}
 	fmt.Println("rpc response data:", string(data))
-
 }

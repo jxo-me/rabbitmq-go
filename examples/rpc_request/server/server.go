@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
 	"os"
 	"os/signal"
@@ -38,7 +37,7 @@ func main() {
 	ctx := context.Background()
 	conn, err = rabbitmq.NewConn(
 		ctx,
-		"amqp://root:123456@192.168.1.10:5672/",
+		"amqp://guest:guest@localhost",
 		rabbitmq.WithConnectionOptionsLogging,
 	)
 	if err != nil {
@@ -53,28 +52,15 @@ func main() {
 	consumer, err := rabbitmq.NewConsumer(
 		ctx,
 		conn,
-		func(d rabbitmq.Delivery) rabbitmq.Action {
+		func(ctx context.Context, rw *rabbitmq.ResponseWriter, d rabbitmq.Delivery) rabbitmq.Action {
 			log.Printf("consumed: %v", string(d.Body))
 			n, err := strconv.Atoi(string(d.Body))
 			failOnError(err, "Failed to convert body to integer")
 
 			log.Printf(" [.] fib(%d)", n)
 			response := fib(n)
-			//bytes, err := json.Marshal(d)
-			//if err != nil {
-			//	fmt.Println("json.Marshal error:", err.Error())
-			//}
-			//fmt.Println("msg:", string(bytes))
-			err = ch.PublishWithContext(ctx,
-				"",        // exchange
-				d.ReplyTo, // routing key
-				false,     // mandatory
-				false,     // immediate
-				amqp.Publishing{
-					ContentType:   "text/plain",
-					CorrelationId: d.CorrelationId,
-					Body:          []byte(strconv.Itoa(response)),
-				})
+			_, _ = fmt.Fprint(rw, strconv.Itoa(response))
+
 			// rabbitmq.Ack, rabbitmq.NackDiscard, rabbitmq.NackRequeue
 			return rabbitmq.Ack
 		},

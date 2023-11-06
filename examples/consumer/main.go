@@ -26,7 +26,7 @@ func main() {
 	consumer, err := rabbitmq.NewConsumer(
 		ctx,
 		conn,
-		func(d rabbitmq.Delivery) rabbitmq.Action {
+		func(ctx context.Context, rw *rabbitmq.ResponseWriter, d rabbitmq.Delivery) rabbitmq.Action {
 			log.Printf("consumed: %v", string(d.Body))
 			// rabbitmq.Ack, rabbitmq.NackDiscard, rabbitmq.NackRequeue
 			return rabbitmq.Ack
