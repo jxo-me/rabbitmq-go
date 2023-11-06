@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -53,14 +54,19 @@ func main() {
 		ctx,
 		conn,
 		func(ctx context.Context, rw *rabbitmq.ResponseWriter, d rabbitmq.Delivery) rabbitmq.Action {
+			bytes, err := json.Marshal(d)
+			if err != nil {
+				fmt.Println("json.Marshal error:", err.Error())
+			}
+			fmt.Println("debug msg:", string(bytes))
 			log.Printf("consumed: %v", string(d.Body))
 			n, err := strconv.Atoi(string(d.Body))
 			failOnError(err, "Failed to convert body to integer")
 
 			log.Printf(" [.] fib(%d)", n)
 			response := fib(n)
+			fmt.Println("response result:", strconv.Itoa(response))
 			_, _ = fmt.Fprint(rw, strconv.Itoa(response))
-
 			// rabbitmq.Ack, rabbitmq.NackDiscard, rabbitmq.NackRequeue
 			return rabbitmq.Ack
 		},

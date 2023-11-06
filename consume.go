@@ -51,6 +51,7 @@ type Consumer struct {
 
 	isClosedMux *sync.RWMutex
 	isClosed    bool
+	outputCh    *amqp.Channel
 	consumersWg sync.WaitGroup
 	responderWg sync.WaitGroup
 	// stopChan channel is used to signal shutdowns when calling Stop(). The
@@ -103,7 +104,6 @@ func NewConsumer(
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = outputCh.Close() }()
 
 	consumer := &Consumer{
 		chanManager:                chanManager,
@@ -112,6 +112,7 @@ func NewConsumer(
 		options:                    *options,
 		isClosedMux:                &sync.RWMutex{},
 		isClosed:                   false,
+		outputCh:                   outputCh,
 		stopChan:                   make(chan struct{}),
 		middlewares:                []ConsumeMiddlewareFunc{},
 		responses:                  make(chan processedRequest),
@@ -130,12 +131,12 @@ func NewConsumer(
 	// This WaitGroup will reach 0 when the responder() has finished sending
 	// all responses.
 	consumer.responderWg.Add(1) // Sync the waitgroup to this goroutine.
-	go consumer.responder(ctx, outputCh, &consumer.responderWg)
+	go consumer.responder(ctx, consumer.outputCh, &consumer.responderWg)
 
 	go func() {
 		err = monitorAndWait(
 			consumer.stopChan,
-			outputCh.NotifyClose(make(chan *amqp.Error)),
+			consumer.outputCh.NotifyClose(make(chan *amqp.Error)),
 		)
 		if err != nil {
 			consumer.options.Logger.Warningf(ctx, "consumer monitor and wait error: %s", err.Error())
@@ -185,6 +186,7 @@ func (consumer *Consumer) Close(ctx context.Context) {
 	if err != nil {
 		consumer.options.Logger.Warningf(ctx, "error while closing the channel: %v", err)
 	}
+	_ = consumer.outputCh.Close()
 	// 3. We've told amqp to stop delivering messages, now we wait for all
 	// the consumers to finish inflight messages.
 	consumer.consumersWg.Done()
