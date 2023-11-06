@@ -131,13 +131,16 @@ func NewConsumer(
 	// all responses.
 	consumer.responderWg.Add(1) // Sync the waitgroup to this goroutine.
 	go consumer.responder(ctx, outputCh, &consumer.responderWg)
-	err = monitorAndWait(
-		consumer.stopChan,
-		outputCh.NotifyClose(make(chan *amqp.Error)),
-	)
-	if err != nil {
-		return nil, err
-	}
+
+	go func() {
+		err = monitorAndWait(
+			consumer.stopChan,
+			outputCh.NotifyClose(make(chan *amqp.Error)),
+		)
+		if err != nil {
+			consumer.options.Logger.Warningf(ctx, "consumer monitor and wait error: %s", err.Error())
+		}
+	}()
 
 	go func() {
 		for err := range consumer.reconnectErrCh {
