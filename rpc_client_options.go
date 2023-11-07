@@ -26,15 +26,15 @@ func getDefaultClientOptions(queueName string) ClientOptions {
 	return ClientOptions{
 		ConsumeOptions: ConsumeOptions{
 			Name:      "",
-			AutoAck:   false,
-			Exclusive: false,
+			AutoAck:   true,
+			Exclusive: true,
 			NoWait:    false,
 			NoLocal:   false,
 			Args:      Table{},
 		},
 		QueueOptions: QueueOptions{
 			Name:       queueName,
-			Durable:    false,
+			Durable:    true,
 			AutoDelete: false,
 			Exclusive:  false,
 			NoWait:     false,
@@ -59,7 +59,8 @@ func getDefaultClientOptions(queueName string) ClientOptions {
 			Declare:    false,
 			Args:       Table{},
 		},
-		Logger: stdDebugLogger{},
+		Logger:      stdDebugLogger{},
+		ConfirmMode: true,
 	}
 }
 
