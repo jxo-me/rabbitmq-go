@@ -172,6 +172,33 @@ func NewConsumer(
 	return consumer, nil
 }
 
+// Run starts consuming with automatic reconnection handling. Do not reuse the
+// consumer for anything other than to close it.
+func (consumer *Consumer) Run(ctx context.Context, handler Handler) error {
+	err := consumer.startGoroutines(
+		ctx,
+		handler,
+		consumer.options,
+	)
+	if err != nil {
+		return err
+	}
+
+	for err = range consumer.reconnectErrCh {
+		consumer.options.Logger.Infof(ctx, "successful consumer recovery from: %v", err)
+		err = consumer.startGoroutines(
+			ctx,
+			handler,
+			consumer.options,
+		)
+		if err != nil {
+			return fmt.Errorf("error restarting consumer goroutines after cancel or close: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // Close cleans up resources and closes the consumer.
 // It does not close the connection manager, just the subscription
 // to the connection manager and the consuming goroutines.
@@ -254,9 +281,11 @@ func (consumer *Consumer) startGoroutines(
 	if err != nil {
 		return fmt.Errorf("declare qos failed: %w", err)
 	}
-	err = declareExchange(consumer.chanManager, options.ExchangeOptions)
-	if err != nil {
-		return fmt.Errorf("declare exchange failed: %w", err)
+	for _, exchangeOption := range options.ExchangeOptions {
+		err = declareExchange(consumer.chanManager, exchangeOption)
+		if err != nil {
+			return fmt.Errorf("declare exchange failed: %w", err)
+		}
 	}
 	err = declareQueue(consumer.chanManager, options.QueueOptions)
 	if err != nil {

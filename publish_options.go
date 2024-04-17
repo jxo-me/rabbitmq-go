@@ -12,13 +12,13 @@ func WithPublishOptionsExchange(exchange string) func(*PublishOptions) {
 }
 
 // WithPublishOptionsMandatory makes the publishing mandatory, which means when a queue is not
-// bound to the routing key, a message will be sent back on the return channel for you to handle
+// bound to the routing key a message will be sent back on the returns channel for you to handle
 func WithPublishOptionsMandatory(options *PublishOptions) {
 	options.Mandatory = true
 }
 
 // WithPublishOptionsImmediate makes the publishing immediate, which means when a consumer is not available
-// to immediately handle the new message, a message will be sent back on the return channel for you to handle
+// to immediately handle the new message, a message will be sent back on the returns channel for you to handle
 func WithPublishOptionsImmediate(options *PublishOptions) {
 	options.Immediate = true
 }

@@ -39,22 +39,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer consumer.Close(ctx)
 
-	// block main thread - wait for shutdown signal
 	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
+		fmt.Println("awaiting signal")
 		sig := <-sigs
 		fmt.Println()
 		fmt.Println(sig)
-		done <- true
+		fmt.Println("stopping consumer")
+
+		consumer.Close(ctx)
 	}()
 
-	fmt.Println("awaiting signal")
-	<-done
-	fmt.Println("stopping consumer")
+	// block main thread - wait for shutdown signal
+	err = consumer.Run(ctx, func(ctx context.Context, rw *rabbitmq.ResponseWriter, d rabbitmq.Delivery) rabbitmq.Action {
+		log.Printf("consumed: %v", string(d.Body))
+		// rabbitmq.Ack, rabbitmq.NackDiscard, rabbitmq.NackRequeue
+		return rabbitmq.Ack
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }

@@ -3,7 +3,7 @@ package rabbitmq
 import "time"
 
 // ExchangeOptions are used to configure an exchange.
-// If the Passive flag is set, the client will only check if the exchange exists on the server
+// If the Passive flag is set the client will only check if the exchange exists on the server
 // and that the settings match, no creation attempt will be made.
 type ExchangeOptions struct {
 	Name       string
@@ -15,6 +15,7 @@ type ExchangeOptions struct {
 	Passive    bool // if false, a missing exchange will be created on the server
 	Args       Table
 	Declare    bool
+	Bindings   []Binding
 }
 
 // QueueOptions are used to configure a queue.
