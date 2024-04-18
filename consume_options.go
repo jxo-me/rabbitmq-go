@@ -64,7 +64,7 @@ func getDefaultBindingOptions() BindingOptions {
 type ConsumerOptions struct {
 	ConsumerOptions ConsumeOptions
 	QueueOptions    QueueOptions
-	ExchangeOptions       []ExchangeOptions
+	ExchangeOptions []ExchangeOptions
 	Concurrency     int
 	Logger          logger.Logger
 	QOSPrefetch     int
@@ -183,6 +183,19 @@ func WithConsumerOptionsRoutingKey(routingKey string) func(*ConsumerOptions) {
 			RoutingKey:     routingKey,
 			BindingOptions: getDefaultBindingOptions(),
 		})
+	}
+}
+
+// WithConsumerOptionsRoutingKeys binds the queue to routingKeys with the default binding options
+func WithConsumerOptionsRoutingKeys(routingKeys []string) func(*ConsumerOptions) {
+	return func(options *ConsumerOptions) {
+		ensureExchangeOptions(options)
+		for _, routingKey := range routingKeys {
+			options.ExchangeOptions[0].Bindings = append(options.ExchangeOptions[0].Bindings, Binding{
+				RoutingKey:     routingKey,
+				BindingOptions: getDefaultBindingOptions(),
+			})
+		}
 	}
 }
 
